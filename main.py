@@ -7,8 +7,33 @@ import adafruit_mlx90640
 import time
 from non_ml import classify
 import pickle
+import pyaudio
 
 model_filename = "finalized_model.pkl"
+
+REMOTE_IP = 172.26.128.140
+LOCAL_IP = 172.26.128.166
+
+def record_audio(duration=3, sample_rate=44100):
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=sample_rate,
+                    input=True,
+                    frames_per_buffer=1024)
+
+    print("Recording...")
+    frames = []
+    for _ in range(int(sample_rate / 1024 * duration)):
+        data = stream.read(1024)
+        frames.append(np.frombuffer(data, dtype=np.float32))
+
+    print("Finished recording.")
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    return np.concatenate(frames)
 
 def collect_data(sensor, duration=3, frequency=15):
     # Calculate total frames to collect
@@ -34,37 +59,61 @@ def main():
     i2c = busio.I2C(board.SCL, board.SDA)
     mlx = adafruit_mlx90640.MLX90640(i2c)
     mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_32_HZ
-    
+
+    # load model
     with open(model_filename, 'rb') as file:
         model = pickle.load(file)
 
-    while True:
-        # Collect data
-        data_frames = collect_data(mlx)
+    
+    # Load the TensorFlow Lite model
+    interpreter = tflite.Interpreter(model_path="ei_audio.tflite")
+    interpreter.allocate_tensors()
 
-        # start_time = time.time()  # Start timing
-        prediction = classify(model, data_frames)
-        # end_time = time.time()  # End timing
-        # inference_time = end_time - start_time  # Calculate inference time
-        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
+    while True:
+        audio_data = record_audio()
+
+        # Get input and output details from the model
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+
+        # Prepare audio data for model input
+        input_shape = input_details[0]['shape']
+        
+        audio_data = np.resize(audio_data, (input_shape[1],))
+        audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
+
+        # Predict
+        interpreter.set_tensor(input_details[0]['index'], audio_data)
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])
+        print(output_data)
+        # # Collect data
+        # data_frames = collect_data(mlx)
+
+        # # start_time = time.time()  # Start timing
+        # prediction = classify(model, data_frames)
+        # # end_time = time.time()  # End timing
+        # # inference_time = end_time - start_time  # Calculate inference time
+        # print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
     
 
-        # Set up the plot for the animation
-        fig, ax = plt.subplots()
-        heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        # # Set up the plot for the animation
+        # fig, ax = plt.subplots()
+        # heatmap = ax.imshow(data_frames[0], cmap='inferno')
 
-        # Animation function to update heatmap
-        def update(frame):
-            heatmap.set_data(frame)
-            return [heatmap]
+        # # Animation function to update heatmap
+        # def update(frame):
+        #     heatmap.set_data(frame)
+        #     return [heatmap]
 
-        # Create animation
-        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        # # Create animation
+        # ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
         
-        # Save animation
-        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        # # Save animation
+        # ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
 
-        plt.show()
+        # plt.show()
+
 
 if __name__ == "__main__":
     main()
