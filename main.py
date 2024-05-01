@@ -101,12 +101,9 @@ def main():
     # interpreter.allocate_tensors()
 
     p = pyaudio.PyAudio()
-    print(p.get_device_count())
-    for i in range(p.get_device_count()):
-        print(p.get_device_info_by_index(i))
 
     # while True:
-    # test_microphone()
+    test_microphone()
         # audio_data = record_audio()
 
         # # Get input and output details from the model
