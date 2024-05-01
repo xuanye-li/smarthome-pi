@@ -6,7 +6,7 @@ import busio
 import adafruit_mlx90640
 import time
 
-def collect_data(sensor, duration=5, frequency=16):
+def collect_data(sensor, duration=3, frequency=15):
     # Calculate total frames to collect
     total_frames = duration * frequency
     frames = []
@@ -25,7 +25,7 @@ def collect_data(sensor, duration=5, frequency=16):
 
 def main():
     # Initialize I2C and MLX90640 sensor
-    i2c = busio.I2C(board.SCL, board.SDA, frequency=800000)
+    i2c = busio.I2C(board.SCL, board.SDA)
     mlx = adafruit_mlx90640.MLX90640(i2c)
     mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_32_HZ
 

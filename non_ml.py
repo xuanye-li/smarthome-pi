@@ -96,6 +96,13 @@ def classify_csv(csv_file_path, threshold=20):
     prediction = model.predict(features)
     return prediction
 
+def classify(m, video):
+    median_series = track_median_points(video, person_low)
+    features = extract_features_from_median_series(median_series)
+    features = features.reshape(1, -1)  # Reshape for a single sample prediction
+    prediction = m.predict(features)
+    return prediction
+
 def test():
     test_files = glob.glob(os.path.join(test_dir, "*.csv"))
     results = {}
@@ -107,40 +114,40 @@ def test():
         results[file_path] = ("Fall Detected" if prediction[0] == 1 else "Normal Activity", inference_time)
     return results
 
+def main():
+    # Load your data
+    fall_paths = glob.glob(os.path.join(falls_dir, "*.csv"))
+    normal_paths = glob.glob(os.path.join(normal_dir, "*.csv"))
+    fall_clips = [load_vid(path) for path in fall_paths]
+    normal_clips = [load_vid(path) for path in normal_paths]
+    video_clips = fall_clips + normal_clips
+    labels = np.array([1]*len(fall_clips) + [0]*len(normal_clips))  # 1 for falls, 0 for normal
 
-# Load your data
-fall_paths = glob.glob(os.path.join(falls_dir, "*.csv"))
-normal_paths = glob.glob(os.path.join(normal_dir, "*.csv"))
-fall_clips = [load_vid(path) for path in fall_paths]
-normal_clips = [load_vid(path) for path in normal_paths]
-video_clips = fall_clips + normal_clips
-labels = np.array([1]*len(fall_clips) + [0]*len(normal_clips))  # 1 for falls, 0 for normal
+    # Extract features using the method described
+    features = extract_features(video_clips, person_low)  # Using person_low as the threshold
 
-# Extract features using the method described
-features = extract_features(video_clips, person_low)  # Using person_low as the threshold
+    # Split the data into training and test sets with stratified sampling
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, stratify=labels, random_state=42)
 
-# Split the data into training and test sets with stratified sampling
-X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, stratify=labels, random_state=42)
+    # Calculate class weights
+    class_weights = {0: 1., 1: len(normal_clips) / len(fall_clips)}
 
-# Calculate class weights
-class_weights = {0: 1., 1: len(normal_clips) / len(fall_clips)}
+    # Train a Random Forest classifier with class weights
+    model = RandomForestClassifier(n_estimators=100, class_weight=class_weights, random_state=42)
+    model.fit(X_train, y_train)
 
-# Train a Random Forest classifier with class weights
-model = RandomForestClassifier(n_estimators=100, class_weight=class_weights, random_state=42)
-model.fit(X_train, y_train)
-
-# Predict and evaluate
-predictions = model.predict(X_test)
-accuracy = accuracy_score(y_test, predictions)
-print(f"Accuracy: {accuracy * 100:.2f}%")
-
-
-# Save the model to disk
-filename = 'finalized_model.pkl'
-with open(filename, 'wb') as file:
-    pickle.dump(model, file)
+    # Predict and evaluate
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    print(f"Accuracy: {accuracy * 100:.2f}%")
 
 
-results = test()
-for file, (result, time_taken) in results.items():
-    print(f"{file}: {result} - Inference Time: {time_taken:.4f} seconds")
+    # Save the model to disk
+    filename = 'finalized_model.pkl'
+    with open(filename, 'wb') as file:
+        pickle.dump(model, file)
+
+
+    results = test()
+    for file, (result, time_taken) in results.items():
+        print(f"{file}: {result} - Inference Time: {time_taken:.4f} seconds")
