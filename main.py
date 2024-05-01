@@ -31,7 +31,7 @@ def test_microphone():
 
     print("Testing microphone... please speak into the mic.")
     try:
-        for _ in range(0, int(RATE / CHUNK * 5)):  # 5 seconds of audio
+        for _ in range(0, int(RATE / CHUNK * 3)):  # 5 seconds of audio
             data = stream.read(CHUNK)
             npdata = np.frombuffer(data, dtype=np.int16)
             if np.any(npdata):
@@ -95,58 +95,56 @@ def main():
     with open(model_filename, 'rb') as file:
         model = pickle.load(file)
 
-    
-    # Load the TensorFlow Lite model
-    # interpreter = tflite.Interpreter(model_path="ei_danger.lite")
-    # interpreter.allocate_tensors()
+    Load the TensorFlow Lite model
+    interpreter = tflite.Interpreter(model_path="ei_danger.lite")
+    interpreter.allocate_tensors()
 
-    p = pyaudio.PyAudio()
+    while True:
+        audio_data = record_audio()
+        # Collect data
+        data_frames = collect_data(mlx)
 
-    # while True:
-    test_microphone()
-        # audio_data = record_audio()
+        # Get input and output details from the model
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
 
-        # # Get input and output details from the model
-        # input_details = interpreter.get_input_details()
-        # output_details = interpreter.get_output_details()
-
-        # # Prepare audio data for model input
-        # input_shape = input_details[0]['shape']
+        # Prepare audio data for model input
+        input_shape = input_details[0]['shape']
         
-        # audio_data = np.resize(audio_data, (input_shape[1],))
-        # audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
+        audio_data = np.resize(audio_data, (input_shape[1],))
+        audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
 
-        # # Predict
-        # interpreter.set_tensor(input_details[0]['index'], audio_data)
-        # interpreter.invoke()
-        # output_data = interpreter.get_tensor(output_details[0]['index'])
-        # print(output_data)
-        # # Collect data
-        # data_frames = collect_data(mlx)
+        # Predict
+        interpreter.set_tensor(input_details[0]['index'], audio_data)
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])
 
-        # # start_time = time.time()  # Start timing
-        # prediction = classify(model, data_frames)
-        # # end_time = time.time()  # End timing
-        # # inference_time = end_time - start_time  # Calculate inference time
-        # print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
+
+        # start_time = time.time()  # Start timing
+        prediction = classify(model, data_frames)
+        # end_time = time.time()  # End timing
+        # inference_time = end_time - start_time  # Calculate inference time
+
+        print(output_data)
+        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
     
 
-        # # Set up the plot for the animation
-        # fig, ax = plt.subplots()
-        # heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        # Set up the plot for the animation
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(data_frames[0], cmap='inferno')
 
-        # # Animation function to update heatmap
-        # def update(frame):
-        #     heatmap.set_data(frame)
-        #     return [heatmap]
+        # Animation function to update heatmap
+        def update(frame):
+            heatmap.set_data(frame)
+            return [heatmap]
 
-        # # Create animation
-        # ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        # Create animation
+        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
         
-        # # Save animation
-        # ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        # Save animation
+        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
 
-        # plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":
