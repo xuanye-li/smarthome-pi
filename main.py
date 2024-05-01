@@ -24,7 +24,6 @@ def collect_data(sensor, duration=3, frequency=15):
             frames.append(np.reshape(frame, (24, 32)))
         except ValueError:
             continue  # Skip the frame on read error
-        time.sleep(1 / frequency)
     end_time = time.time()  # End timing
     gather_time = end_time - start_time  # Calculate inference time
     print(gather_time)
@@ -43,11 +42,11 @@ def main():
         # Collect data
         data_frames = collect_data(mlx)
 
-        start_time = time.time()  # Start timing
-        prediction = classify(model, data_frames)
-        end_time = time.time()  # End timing
-        inference_time = end_time - start_time  # Calculate inference time
-        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}, {inference_time}')
+        # start_time = time.time()  # Start timing
+        # prediction = classify(model, data_frames)
+        # end_time = time.time()  # End timing
+        # inference_time = end_time - start_time  # Calculate inference time
+        # print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}, {inference_time}')
     
 
     # # Set up the plot for the animation
