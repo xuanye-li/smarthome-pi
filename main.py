@@ -107,7 +107,7 @@ def main():
         print("No mics availiable")
 
     # while True:
-    test_microphone()
+    # test_microphone()
         # audio_data = record_audio()
 
         # # Get input and output details from the model
