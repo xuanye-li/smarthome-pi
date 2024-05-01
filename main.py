@@ -95,7 +95,7 @@ def main():
     with open(model_filename, 'rb') as file:
         model = pickle.load(file)
 
-    Load the TensorFlow Lite model
+    # Load the TensorFlow Lite model
     interpreter = tflite.Interpreter(model_path="ei_danger.lite")
     interpreter.allocate_tensors()
 
