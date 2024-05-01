@@ -15,6 +15,36 @@ model_filename = "finalized_model.pkl"
 REMOTE_IP = "172.26.128.140"
 LOCAL_IP = "172.26.128.166"
 
+
+FORMAT = pyaudio.paInt16  # Typical format for microphone
+CHANNELS = 1
+RATE = 44100  # Sample rate
+CHUNK = 1024  # Block size
+
+def test_microphone():
+    audio = pyaudio.PyAudio()
+
+    # Open stream
+    stream = audio.open(format=FORMAT, channels=CHANNELS,
+                        rate=RATE, input=True,
+                        frames_per_buffer=CHUNK)
+
+    print("Testing microphone... please speak into the mic.")
+    try:
+        for _ in range(0, int(RATE / CHUNK * 5)):  # 5 seconds of audio
+            data = stream.read(CHUNK)
+            npdata = np.frombuffer(data, dtype=np.int16)
+            if np.any(npdata):
+                print("Audio detected.")
+                break
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Stop and close the stream and terminate pyaudio
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+
 def record_audio(duration=3, sample_rate=44100):
     p = pyaudio.PyAudio()
     stream = p.open(format=pyaudio.paFloat32,
@@ -71,23 +101,24 @@ def main():
     interpreter.allocate_tensors()
 
     while True:
-        audio_data = record_audio()
+        test_microphone()
+        # audio_data = record_audio()
 
-        # Get input and output details from the model
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
+        # # Get input and output details from the model
+        # input_details = interpreter.get_input_details()
+        # output_details = interpreter.get_output_details()
 
-        # Prepare audio data for model input
-        input_shape = input_details[0]['shape']
+        # # Prepare audio data for model input
+        # input_shape = input_details[0]['shape']
         
-        audio_data = np.resize(audio_data, (input_shape[1],))
-        audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
+        # audio_data = np.resize(audio_data, (input_shape[1],))
+        # audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
 
-        # Predict
-        interpreter.set_tensor(input_details[0]['index'], audio_data)
-        interpreter.invoke()
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        print(output_data)
+        # # Predict
+        # interpreter.set_tensor(input_details[0]['index'], audio_data)
+        # interpreter.invoke()
+        # output_data = interpreter.get_tensor(output_details[0]['index'])
+        # print(output_data)
         # # Collect data
         # data_frames = collect_data(mlx)
 
