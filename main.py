@@ -11,8 +11,8 @@ import pyaudio
 
 model_filename = "finalized_model.pkl"
 
-REMOTE_IP = 172.26.128.140
-LOCAL_IP = 172.26.128.166
+REMOTE_IP = "172.26.128.140"
+LOCAL_IP = "172.26.128.166"
 
 def record_audio(duration=3, sample_rate=44100):
     p = pyaudio.PyAudio()
