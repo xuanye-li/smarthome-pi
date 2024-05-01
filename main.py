@@ -67,7 +67,7 @@ def main():
 
     
     # Load the TensorFlow Lite model
-    interpreter = tflite.Interpreter(model_path="ei_audio.tflite")
+    interpreter = tflite.Interpreter(model_path="ei_audio.lite")
     interpreter.allocate_tensors()
 
     while True:
