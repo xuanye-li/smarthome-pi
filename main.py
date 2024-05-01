@@ -100,8 +100,8 @@ def main():
     interpreter = tflite.Interpreter(model_path="ei_danger.lite")
     interpreter.allocate_tensors()
 
-    while True:
-        test_microphone()
+    # while True:
+    test_microphone()
         # audio_data = record_audio()
 
         # # Get input and output details from the model
