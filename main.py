@@ -101,10 +101,9 @@ def main():
     # interpreter.allocate_tensors()
 
     p = pyaudio.PyAudio()
-    try:
-        print(p.get_default_input_device_info())
-    except:
-        print("No mics availiable")
+    print(p.get_device_count())
+    for i in range(p.get_device_count()):
+        print(p.get_device_info_by_index(i))
 
     # while True:
     # test_microphone()
