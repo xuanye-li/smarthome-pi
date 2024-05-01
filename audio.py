@@ -1,5 +1,6 @@
 import pyaudio
 from pydub import AudioSegment
+import wave
 
 FORMAT = pyaudio.paInt16  # Audio format (16-bit PCM)
 CHANNELS = 1              # Number of audio channels
