@@ -43,10 +43,10 @@ def main():
         data_frames = collect_data(mlx)
 
         # start_time = time.time()  # Start timing
-        # prediction = classify(model, data_frames)
+        prediction = classify(model, data_frames)
         # end_time = time.time()  # End timing
         # inference_time = end_time - start_time  # Calculate inference time
-        # print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}, {inference_time}')
+        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
     
 
     # # Set up the plot for the animation
