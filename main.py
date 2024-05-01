@@ -100,6 +100,12 @@ def main():
     # interpreter = tflite.Interpreter(model_path="ei_danger.lite")
     # interpreter.allocate_tensors()
 
+    p = pyaudio.PyAudio()
+    try:
+        print(p.get_default_input_device_info())
+    except:
+        print("No mics availiable")
+
     # while True:
     test_microphone()
         # audio_data = record_audio()
