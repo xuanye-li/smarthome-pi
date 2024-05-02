@@ -169,7 +169,6 @@ def main():
     interpreter.allocate_tensors()
 
     audio_processing  = threading.Thread(target=audio_thread, args=(interpreter,))
-    ir_processing  = threading.Thread(target=ir_thread, args=(model, mlx))
 
         # start_time = time.time()  # Start timing
         
@@ -177,11 +176,27 @@ def main():
         # inference_time = end_time - start_time  # Calculate inference time
 
     audio_processing .start()
-    ir_processing .start()
 
-    # Join threads to prevent the main thread from exiting prematurely
-    audio_processing .join()
-    ir_processing .join()
+    while True:
+        data_frames = collect_data(mlx)
+        prediction = classify(model, data_frames)
+        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
+
+        # Set up the plot for the animation
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        
+        # Animation function to update heatmap
+        def update(frame):
+            heatmap.set_data(frame)
+            return [heatmap]
+
+        # Create animation
+        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        
+        # Save animation
+        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        plt.show()
         
 
 if __name__ == "__main__":
