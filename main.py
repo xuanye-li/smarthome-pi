@@ -132,7 +132,7 @@ def main():
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
             wf.setframerate(RATE)
-            wf.writeframes(audio_data)
+            wf.writeframes(raw_audio_data)
 
         print(f"Audio saved to {filename}")
 
