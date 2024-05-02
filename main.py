@@ -168,13 +168,20 @@ def main():
     interpreter = tflite.Interpreter(model_path="ei_danger.lite")
     interpreter.allocate_tensors()
 
-    audio_thread = threading.Thread(target=audio_thread, args=(interpreter,))
-    ir_thread = threading.Thread(target=ir_thead, args=(model, mlx))
+    audio_processing  = threading.Thread(target=audio_thread, args=(interpreter,))
+    ir_processing  = threading.Thread(target=ir_thread, args=(model, mlx))
 
         # start_time = time.time()  # Start timing
         
         # end_time = time.time()  # End timing
         # inference_time = end_time - start_time  # Calculate inference time
+
+    audio_processing .start()
+    ir_processing .start()
+
+    # Join threads to prevent the main thread from exiting prematurely
+    audio_processing .join()
+    ir_processing .join()
         
 
 if __name__ == "__main__":
