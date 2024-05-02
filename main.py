@@ -10,42 +10,24 @@ import pickle
 import pyaudio
 import tflite_runtime.interpreter as tflite
 
-model_filename = "finalized_model.pkl"
-
-REMOTE_IP = "172.26.128.140"
-LOCAL_IP = "172.26.128.166"
-
 
 FORMAT = pyaudio.paInt16  # Typical format for microphone
 CHANNELS = 1
 RATE = 44100  # Sample rate
 CHUNK = 1024  # Block size
 
-def test_microphone():
-    audio = pyaudio.PyAudio()
+def send_file(filename, server_ip, server_port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.connect((server_ip, server_port))
+        with open(filename, 'rb') as f:
+            while True:
+                data = f.read(1024)
+                if not data:
+                    break
+                sock.sendall(data)
+        print(f"File {filename} sent successfully.")
 
-    # Open stream
-    stream = audio.open(format=FORMAT, channels=CHANNELS,
-                        rate=RATE, input=True,
-                        frames_per_buffer=CHUNK)
-
-    print("Testing microphone... please speak into the mic.")
-    try:
-        for _ in range(0, int(RATE / CHUNK * 3)):  # 5 seconds of audio
-            data = stream.read(CHUNK)
-            npdata = np.frombuffer(data, dtype=np.int16)
-            if np.any(npdata):
-                print("Audio detected.")
-                break
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    finally:
-        # Stop and close the stream and terminate pyaudio
-        stream.stop_stream()
-        stream.close()
-        audio.terminate()
-
-def record_audio(duration=3, sample_rate=44100):
+def record_audio(duration=5, sample_rate=44100):
     p = pyaudio.PyAudio()
     stream = p.open(format=pyaudio.paFloat32,
                     channels=1,
@@ -63,6 +45,13 @@ def record_audio(duration=3, sample_rate=44100):
     stream.stop_stream()
     stream.close()
     p.terminate()
+
+    with wave.open(filename, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(p.get_sample_size(pyaudio.paFloat32))
+        wf.setframerate(sample_rate)
+        wf.writeframes(b''.join(frames))
+    print(f"Audio saved to {filename}")
 
     return np.concatenate(frames)
 
@@ -86,6 +75,11 @@ def collect_data(sensor, duration=3, frequency=15):
     return frames
 
 def main():
+    model_filename = "finalized_model.pkl"
+
+    REMOTE_IP = "172.26.128.140"
+    PORT = 50007
+    LOCAL_IP = "172.26.128.166"
     # Initialize I2C and MLX90640 sensor
     i2c = busio.I2C(board.SCL, board.SDA)
     mlx = adafruit_mlx90640.MLX90640(i2c)
@@ -118,14 +112,18 @@ def main():
         interpreter.set_tensor(input_details[0]['index'], audio_data)
         interpreter.invoke()
         output_data = interpreter.get_tensor(output_details[0]['index'])
-
+        predicted_label_index = np.argmax(output_data)
 
         # start_time = time.time()  # Start timing
         prediction = classify(model, data_frames)
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((REMOTE_IP, PORT))
+            sock.sendall(data)
         # end_time = time.time()  # End timing
         # inference_time = end_time - start_time  # Calculate inference time
 
-        print(output_data)
+        print(predicted_label_index)
         print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
     
 
