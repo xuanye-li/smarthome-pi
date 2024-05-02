@@ -146,6 +146,8 @@ def main():
                 sock.sendall(data)
         print(f"File {filename} sent successfully.")
 
+        sock.shutdown(socket.SHUT_WR)
+
         response = sock.recv(1024)
         print("Server response:", response.decode())
 
