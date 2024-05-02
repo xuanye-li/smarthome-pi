@@ -9,7 +9,7 @@ from non_ml import classify
 import pickle
 import pyaudio
 import tflite_runtime.interpreter as tflite
-import sock
+import socket
 
 
 FORMAT = pyaudio.paInt16  # Typical format for microphone
