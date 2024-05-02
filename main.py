@@ -113,7 +113,7 @@ def main():
     input_shape = input_details[0]['shape']
     
     raw_audio_data = np.frombuffer(raw_audio_data, dtype=np.float32)
-    audio_data = np.resize(audio_data, (input_details[0]['shape'][1],))
+    audio_data = np.resize(raw_audio_data, (input_details[0]['shape'][1],))
     audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
 
     # Predict
