@@ -168,7 +168,7 @@ def main():
         model = pickle.load(file)
 
     # Load the TensorFlow Lite model
-    interpreter = tflite.Interpreter(model_path="ei_danger.lite")
+    interpreter = tflite.Interpreter(model_path="danger_float.lite")
     interpreter.allocate_tensors()
 
     audio_processing  = threading.Thread(target=audio_thread, args=(interpreter,))
