@@ -85,38 +85,41 @@ def audio_thread(interpreter):
         print("Model output:", output_data)
         print("Predicted label index:", predicted_label_index)
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((REMOTE_IP, PORT))
-            # Save the recorded data as a WAV file
-            filename = 'a.wav'
-            audio_int16 = np.int16(raw_audio_data / np.max(np.abs(raw_audio_data)) * 32767)
-            with wave.open(filename, 'wb') as wf:
-                wf.setnchannels(CHANNELS)
-                wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
-                wf.setframerate(RATE)
-                wf.writeframes(audio_int16)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((REMOTE_IP, PORT))
+                # Save the recorded data as a WAV file
+                filename = 'a.wav'
+                audio_int16 = np.int16(raw_audio_data / np.max(np.abs(raw_audio_data)) * 32767)
+                with wave.open(filename, 'wb') as wf:
+                    wf.setnchannels(CHANNELS)
+                    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
+                    wf.setframerate(RATE)
+                    wf.writeframes(audio_int16)
 
-            print(f"Audio saved to {filename}")
+                print(f"Audio saved to {filename}")
 
-            # Send the file
-            with open(filename, 'rb') as f:
-                while True:
-                    data = f.read(1024)
-                    if not data:
-                        break
-                    sock.sendall(data)
-            print(f"File {filename} sent successfully.")
+                # Send the file
+                with open(filename, 'rb') as f:
+                    while True:
+                        data = f.read(1024)
+                        if not data:
+                            break
+                        sock.sendall(data)
+                print(f"File {filename} sent successfully.")
 
-            sock.shutdown(socket.SHUT_WR)
+                sock.shutdown(socket.SHUT_WR)
 
-            response = sock.recv(1024)
-            print("Server response:", response.decode())
+                response = sock.recv(1024)
+                print("Server response:", response.decode())
 
-            # Act based on the server's response
-            if response.decode() == "File received successfully.":
-                print("Action confirmed: Server has received the file.")
-            else:
-                print("Action required: Check file integrity or resend.")
+                # Act based on the server's response
+                if response.decode() == "File received successfully.":
+                    print("Action confirmed: Server has received the file.")
+                else:
+                    print("Action required: Check file integrity or resend.")
+        except Exception as e:
+            print(f"Error in audio_thread: {e}")
 
 
 def ir_thread(model, mlx):
