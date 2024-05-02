@@ -14,6 +14,8 @@ import wave
 import threading
 import os
 import sys
+import json
+import requests
 
 FORMAT = pyaudio.paFloat32  # Typical format for microphone
 CHANNELS = 1
@@ -25,6 +27,18 @@ original_stderr = sys.stderr
 
 # Redirect stderr to null
 sys.stderr = open(os.devnull, 'w')
+
+def send_to_webapp(label, filepath):
+    url = 'http://172.26.173.56:8000/data/receive/'
+    headers = {'Content-Type': 'application/json'}
+    data = json.dumps({'label': label})
+    if label == 'fall':
+        file_type = 'video/mp4'
+    else:
+        file_type = 'audio/wav'
+    files = {'media_file': (file_path, open(file_path, 'rb'), file_type)}
+    response = requests.post(url, headers=headers, data=data, files=files)
+    print(response.json())
 
 #def send_file(audio_data, filename, server_ip, server_port):
 def record_audio(duration=5):
@@ -62,9 +76,24 @@ def collect_data(sensor, duration=3, frequency=15):
     print(f'IR Time: {gather_time}')
     return frames
 
+def create_wav(raw_audio_data, filename):
+    audio_int16 = np.int16(raw_audio_data / np.max(np.abs(raw_audio_data)) * 32767)
+    with wave.open(filename, 'wb') as wf:
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
+        wf.setframerate(RATE)
+        wf.writeframes(audio_int16)
+
+    print(f"Audio saved to {filename}")
+
 def audio_thread(interpreter):
-    REMOTE_IP = "192.168.1.155"
+    # REMOTE_IP = "192.168.1.155"
+    REMOTE_IP = "172.26.128.140"
     PORT = 50007
+    CONFIDENCE = 0.6
+    filename = 'recording.wav'
+    labels = ['crying', 'glass breaking', 'gunshot', 'normal']
+
     while True:
         raw_audio_data = record_audio()
         
@@ -87,41 +116,36 @@ def audio_thread(interpreter):
         print("Model output:", output_data)
         print("Predicted label index:", predicted_label_index)
 
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect((REMOTE_IP, PORT))
-                # Save the recorded data as a WAV file
-                filename = 'a.wav'
-                audio_int16 = np.int16(raw_audio_data / np.max(np.abs(raw_audio_data)) * 32767)
-                with wave.open(filename, 'wb') as wf:
-                    wf.setnchannels(CHANNELS)
-                    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
-                    wf.setframerate(RATE)
-                    wf.writeframes(audio_int16)
+        if predicted_label_index == 3:
+            create_wav(raw_audio_data, filename)
+            send_to_webapp(labels[predicted_label_index], filename)
+            break
 
-                print(f"Audio saved to {filename}")
+        else if output_data[3] < CONFIDENCE:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.connect((REMOTE_IP, PORT))
+                    # Save the recorded data as a WAV file
+                    create_wav(raw_audio_data, filename)
 
-                # Send the file
-                with open(filename, 'rb') as f:
-                    while True:
-                        data = f.read(1024)
-                        if not data:
-                            break
-                        sock.sendall(data)
-                print(f"File {filename} sent successfully.")
+                    # Send the file
+                    with open(filename, 'rb') as f:
+                        while True:
+                            data = f.read(1024)
+                            if not data:
+                                break
+                            sock.sendall(data)
+                    print(f"File {filename} sent successfully.")
 
-                sock.shutdown(socket.SHUT_WR)
+                    sock.shutdown(socket.SHUT_WR)
 
-                response = sock.recv(1024)
-                print("Server response:", response.decode())
-
-                # Act based on the server's response
-                if response.decode() == "File received successfully.":
-                    print("Action confirmed: Server has received the file.")
-                else:
-                    print("Action required: Check file integrity or resend.")
-        except Exception as e:
-            print(f"Error in audio_thread: {e}")
+                    response = sock.recv(1024)
+                    CLAP_label = response.decode()
+                    print("CLAP response:", CLAP_label)
+                    if CLAP_label != 'normal':
+                        send_to_webapp(CLAP_label, filename)
+            except Exception as e:
+                print(f"Error in audio_thread: {e}")
 
 
 def ir_thread(model, mlx):
@@ -129,33 +153,35 @@ def ir_thread(model, mlx):
     while True:
         data_frames = collect_data(mlx)
         prediction = classify(model, data_frames)
-        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
 
-        # Set up the plot for the animation
-        fig, ax = plt.subplots()
-        heatmap = ax.imshow(data_frames[0], cmap='inferno')
-        
-        # Animation function to update heatmap
-        def update(frame):
-            heatmap.set_data(frame)
-            return [heatmap]
+        if prediction[0] == 1:
+            print("Fall Detected")
+            # Set up the plot for the animation
+            fig, ax = plt.subplots()
+            heatmap = ax.imshow(data_frames[0], cmap='inferno')
+            
+            # Animation function to update heatmap
+            def update(frame):
+                heatmap.set_data(frame)
+                return [heatmap]
 
-        # Create animation
-        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-        
-        # Save animation
-        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-        plt.show()
+            # Create animation
+            ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+            # Save animation
+            ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+            send_to_webapp('fall', 'heatmap_video.mp4')
+
+        else:
+            print(f'{"No Fall"}')
+
 
 
 
 def main():
     model_filename = "finalized_model.pkl"
 
-    # REMOTE_IP = "172.26.128.140"
+    WEBAPP_IP = "172.26.173.56"
     # LOCAL_IP = "172.26.128.166"
-
-
     # REMOTE_IP = "192.168.1.154"
 
     # Initialize I2C and MLX90640 sensor
@@ -183,23 +209,26 @@ def main():
     while True:
         data_frames = collect_data(mlx)
         prediction = classify(model, data_frames)
-        print(f'{"Fall Detected" if prediction[0] == 1 else "Normal Activity"}')
 
-        # Set up the plot for the animation
-        fig, ax = plt.subplots()
-        heatmap = ax.imshow(data_frames[0], cmap='inferno')
-        
-        # Animation function to update heatmap
-        def update(frame):
-            heatmap.set_data(frame)
-            return [heatmap]
+        if prediction[0] == 1:
+            print("Fall Detected")
+            # Set up the plot for the animation
+            fig, ax = plt.subplots()
+            heatmap = ax.imshow(data_frames[0], cmap='inferno')
+            
+            # Animation function to update heatmap
+            def update(frame):
+                heatmap.set_data(frame)
+                return [heatmap]
 
-        # Create animation
-        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-        
-        # Save animation
-        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-        plt.show()
+            # Create animation
+            ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+            # Save animation
+            ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+            send_to_webapp('fall', 'heatmap_video.mp4')
+
+        else:
+            print(f'{"No Fall"}')
         
 
 if __name__ == "__main__":

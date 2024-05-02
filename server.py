@@ -33,5 +33,6 @@ def server_listen(bind_ip, bind_port, allowed_ip):
 if __name__ == "__main__":
     LOCAL_IP = '0.0.0.0'  # Listen on all network interfaces
     PORT = 50007
-    REMOTE_IP = '192.168.1.154'
+    # REMOTE_IP = '192.168.1.154'
+    REMOTE_IP = "172.26.128.166"
     server_listen(LOCAL_IP, PORT, REMOTE_IP)
