@@ -6,28 +6,29 @@ def server_listen(bind_ip, bind_port, allowed_ip):
         server_socket.listen(1)
         print("Server is listening for connections...")
 
-        # Accept a client connection
-        conn, addr = server_socket.accept()
-        print(f"Connection attempted from {addr[0]}")
+        while True:
+            # Accept a client connection
+            conn, addr = server_socket.accept()
+            print(f"Connection attempted from {addr[0]}")
 
-        # Check if the connection is from the allowed IP
-        if addr[0] == allowed_ip:
-            print(f"Connected by {addr}")
-            with conn:
-                with open('received_output.wav', 'wb') as f:
-                    while True:
-                        data = conn.recv(1024)
-                        if not data:
-                            break
-                        f.write(data)
+            # Check if the connection is from the allowed IP
+            if addr[0] == allowed_ip:
+                print(f"Connected by {addr}")
+                with conn:
+                    with open('received_output.wav', 'wb') as f:
+                        while True:
+                            data = conn.recv(1024)
+                            if not data:
+                                break
+                            f.write(data)
 
-                print("File received successfully.")
+                    print("File received successfully.")
 
-                # Send a confirmation message back to the client
-                conn.sendall(b"File received successfully.")
-        else:
-            print(f"Connection rejected from {addr[0]}")
-            conn.close()
+                    # Send a confirmation message back to the client
+                    conn.sendall(b"File received successfully.")
+            else:
+                print(f"Connection rejected from {addr[0]}")
+                conn.close()
     
 if __name__ == "__main__":
     LOCAL_IP = '0.0.0.0'  # Listen on all network interfaces
