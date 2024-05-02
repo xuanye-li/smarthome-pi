@@ -63,6 +63,8 @@ def collect_data(sensor, duration=3, frequency=15):
     return frames
 
 def audio_thread(interpreter):
+    REMOTE_IP = "192.168.1.155"
+    PORT = 50007
     while True:
         raw_audio_data = record_audio()
         
@@ -155,8 +157,6 @@ def main():
 
 
     # REMOTE_IP = "192.168.1.154"
-    REMOTE_IP = "192.168.1.155"
-    PORT = 50007
 
     # Initialize I2C and MLX90640 sensor
     i2c = busio.I2C(board.SCL, board.SDA)
