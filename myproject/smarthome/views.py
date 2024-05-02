@@ -12,7 +12,7 @@ def classification_list(request):
 @csrf_exempt
 def receive_data(request):
     if request.method == 'POST':
-        label = request.POST.get('label', 'Unknown')
+        label = request.POST.get('label')
         media_file = request.FILES.get('media_file')
 
         classification = Classification.objects.create(
