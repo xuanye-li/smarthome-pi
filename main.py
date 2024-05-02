@@ -22,23 +22,27 @@ CHANNELS = 1
 RATE = 44100  # Sample rate
 CHUNK = 1024  # Block size
 
-# Save the current stderr channel
-original_stderr = sys.stderr
+def send_to_webapp(label, file_path):
+    url = 'http://172.26.173.56:8000/receive/'
+    data = {'label': label}  # This is the form data
 
-# Redirect stderr to null
-sys.stderr = open(os.devnull, 'w')
-
-def send_to_webapp(label, filepath):
-    url = 'http://172.26.173.56:8000/data/receive/'
-    headers = {'Content-Type': 'application/json'}
-    data = json.dumps({'label': label})
+    # Determine file type based on label
     if label == 'fall':
         file_type = 'video/mp4'
     else:
         file_type = 'audio/wav'
-    files = {'media_file': (file_path, open(file_path, 'rb'), file_type)}
-    response = requests.post(url, headers=headers, data=data, files=files)
-    print(response.json())
+
+    # Using a context manager to ensure the file is closed after the request
+    with open(file_path, 'rb') as f:
+        files = {'media_file': (file_path, f, file_type)}
+        response = requests.post(url, data=data, files=files)
+
+    print("Response received")
+    try:
+        print(response.json())
+    except Exception as e:
+        print(f"Failed to decode JSON from response: {e}")
+        print("Response content:", response.text)
 
 #def send_file(audio_data, filename, server_ip, server_port):
 def record_audio(duration=5):
@@ -114,14 +118,15 @@ def audio_thread(interpreter):
         output_data = interpreter.get_tensor(output_details[0]['index'])
         predicted_label_index = np.argmax(output_data)
         print("Model output:", output_data)
-        print("Predicted label index:", predicted_label_index)
+        
 
-        if predicted_label_index == 3:
+        if predicted_label_index != 3:
+            print("Predicted label index:", predicted_label_index)
             create_wav(raw_audio_data, filename)
             send_to_webapp(labels[predicted_label_index], filename)
-            break
 
-        else if output_data[3] < CONFIDENCE:
+        elif output_data[0, predicted_label_index] < CONFIDENCE:
+            print("Predicted label index:", predicted_label_index)
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     sock.connect((REMOTE_IP, PORT))
@@ -146,6 +151,8 @@ def audio_thread(interpreter):
                         send_to_webapp(CLAP_label, filename)
             except Exception as e:
                 print(f"Error in audio_thread: {e}")
+        else:
+            create_wav(raw_audio_data, filename)            
 
 
 def ir_thread(model, mlx):
@@ -204,8 +211,7 @@ def main():
         # end_time = time.time()  # End timing
         # inference_time = end_time - start_time  # Calculate inference time
 
-    audio_processing .start()
-
+    audio_processing.start()
     while True:
         data_frames = collect_data(mlx)
         prediction = classify(model, data_frames)
