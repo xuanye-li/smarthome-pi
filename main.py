@@ -127,8 +127,9 @@ def main():
     print("Predicted label index:", predicted_label_index)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.connect((server_ip, server_port))
+        sock.connect((REMOTE_IP, PORT))
         # Save the recorded data as a WAV file
+        filename = 'a.wav'
         with wave.open(filename, 'wb') as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
@@ -138,15 +139,13 @@ def main():
         print(f"Audio saved to {filename}")
 
         # Send the file
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((server_ip, server_port))
-            with open(filename, 'rb') as f:
-                while True:
-                    data = f.read(1024)
-                    if not data:
-                        break
-                    sock.sendall(data)
-            print(f"File {filename} sent successfully.")
+        with open(filename, 'rb') as f:
+            while True:
+                data = f.read(1024)
+                if not data:
+                    break
+                sock.sendall(data)
+        print(f"File {filename} sent successfully.")
 
         response = sock.recv(1024)
         print("Server response:", response.decode())
