@@ -92,7 +92,7 @@ def create_wav(raw_audio_data, filename):
 
 def audio_thread(interpreter):
     # REMOTE_IP = "192.168.1.155"
-    REMOTE_IP = "172.26.128.140"
+    REMOTE_IP = "172.26.189.161"
     PORT = 50007
     CONFIDENCE = 0.6
     filename = 'recording.wav'
@@ -118,41 +118,63 @@ def audio_thread(interpreter):
         output_data = interpreter.get_tensor(output_details[0]['index'])
         predicted_label_index = np.argmax(output_data)
         print("Model output:", output_data)
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((REMOTE_IP, PORT))
+            # Save the recorded data as a WAV file
+            create_wav(raw_audio_data, filename)
+
+            # Send the file
+            with open(filename, 'rb') as f:
+                while True:
+                    data = f.read(1024)
+                    if not data:
+                        break
+                    sock.sendall(data)
+            print(f"File {filename} sent successfully.")
+
+            sock.shutdown(socket.SHUT_WR)
+            print("waiting for response")
+            response = sock.recv(1024)
+            CLAP_label = response.decode()
+            print("CLAP response:", CLAP_label)
+            if CLAP_label != 'normal':
+                send_to_webapp(CLAP_label, filename)
         
 
-        if predicted_label_index != 3:
-            print("Predicted label index:", predicted_label_index)
-            create_wav(raw_audio_data, filename)
-            send_to_webapp(labels[predicted_label_index], filename)
+        # if predicted_label_index != 3:
+        #     print("Predicted label index:", predicted_label_index)
+        #     create_wav(raw_audio_data, filename)
+        #     send_to_webapp(labels[predicted_label_index], filename)
 
-        elif output_data[0, predicted_label_index] < CONFIDENCE:
-            print("Predicted label index:", predicted_label_index)
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                    sock.connect((REMOTE_IP, PORT))
-                    # Save the recorded data as a WAV file
-                    create_wav(raw_audio_data, filename)
+        # elif output_data[0, predicted_label_index] < CONFIDENCE:
+        #     print("Predicted label index:", predicted_label_index)
+        #     try:
+        #         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        #             sock.connect((REMOTE_IP, PORT))
+        #             # Save the recorded data as a WAV file
+        #             create_wav(raw_audio_data, filename)
 
-                    # Send the file
-                    with open(filename, 'rb') as f:
-                        while True:
-                            data = f.read(1024)
-                            if not data:
-                                break
-                            sock.sendall(data)
-                    print(f"File {filename} sent successfully.")
+        #             # Send the file
+        #             with open(filename, 'rb') as f:
+        #                 while True:
+        #                     data = f.read(1024)
+        #                     if not data:
+        #                         break
+        #                     sock.sendall(data)
+        #             print(f"File {filename} sent successfully.")
 
-                    sock.shutdown(socket.SHUT_WR)
+        #             sock.shutdown(socket.SHUT_WR)
 
-                    response = sock.recv(1024)
-                    CLAP_label = response.decode()
-                    print("CLAP response:", CLAP_label)
-                    if CLAP_label != 'normal':
-                        send_to_webapp(CLAP_label, filename)
-            except Exception as e:
-                print(f"Error in audio_thread: {e}")
-        else:
-            create_wav(raw_audio_data, filename)            
+        #             response = sock.recv(1024)
+        #             CLAP_label = response.decode()
+        #             print("CLAP response:", CLAP_label)
+        #             if CLAP_label != 'normal':
+        #                 send_to_webapp(CLAP_label, filename)
+        #     except Exception as e:
+        #         print(f"Error in audio_thread: {e}")
+        # else:
+        #     create_wav(raw_audio_data, filename)            
 
 
 def ir_thread(model, mlx):
