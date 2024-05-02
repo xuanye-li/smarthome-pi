@@ -114,7 +114,7 @@ def main():
     # Prepare audio data for model input
     input_shape = input_details[0]['shape']
     
-    audio_data = np.frombuffer(raw_audio_data, dtype=np.int16)
+    audio_data = np.frombuffer(raw_audio_data)
     audio_data = np.resize(audio_data, (input_details[0]['shape'][1],))
     audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
 
