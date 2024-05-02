@@ -18,13 +18,13 @@ RATE = 44100  # Sample rate
 CHUNK = 1024  # Block size
 
 #def send_file(audio_data, filename, server_ip, server_port):
-def record_audio(duration=5, sample_rate=44100):
+def record_audio(duration=5):
     p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT, channels=CHANNELS, rate=sample_rate, input=True, frames_per_buffer=CHUNK)
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
     print("Recording...")
     frames = []
-    for _ in range(int(sample_rate / CHUNK * duration)):
+    for _ in range(int(RATE / CHUNK * duration)):
         data = stream.read(CHUNK)
         frames.append(data)
 
@@ -112,7 +112,7 @@ def main():
     # Prepare audio data for model input
     input_shape = input_details[0]['shape']
     
-    audio_data = np.frombuffer(raw_audio_data, dtype=np.float32)
+    raw_audio_data = np.frombuffer(raw_audio_data, dtype=np.float32)
     audio_data = np.resize(audio_data, (input_details[0]['shape'][1],))
     audio_data = np.expand_dims(audio_data, axis=0)  # Reshape to [1, 16000*3]
 
@@ -128,11 +128,12 @@ def main():
         sock.connect((REMOTE_IP, PORT))
         # Save the recorded data as a WAV file
         filename = 'a.wav'
+        audio_int16 = np.int16(raw_audio_data / np.max(np.abs(raw_audio_data)) * 32767)
         with wave.open(filename, 'wb') as wf:
             wf.setnchannels(CHANNELS)
-            wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
+            wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
             wf.setframerate(RATE)
-            wf.writeframes(raw_audio_data)
+            wf.writeframes(audio_int16)
 
         print(f"Audio saved to {filename}")
 
