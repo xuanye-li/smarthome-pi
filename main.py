@@ -12,14 +12,13 @@ import tflite_runtime.interpreter as tflite
 import socket
 import wave
 
+FORMAT = pyaudio.paFloat32  # Typical format for microphone
+CHANNELS = 1
+RATE = 44100  # Sample rate
+CHUNK = 1024  # Block size
+
 #def send_file(audio_data, filename, server_ip, server_port):
-
-
 def record_audio(duration=5, sample_rate=44100):
-    FORMAT = pyaudio.paFloat32  # Typical format for microphone
-    CHANNELS = 1
-    RATE = 44100  # Sample rate
-    CHUNK = 1024  # Block size
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT, channels=CHANNELS, rate=sample_rate, input=True, frames_per_buffer=CHUNK)
 
