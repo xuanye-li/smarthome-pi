@@ -18,7 +18,7 @@
         <a href="#about">About</a>
     </nav>
     <div class="content">
-        <h1>Classification Results</h1>
+        <h1>Danger Alerts</h1>
         <ul>
             <button class="button button-danger">Call 911</button>
             {% for classification in classifications %}
@@ -32,7 +32,7 @@
                 <button class="button button-light">Mark as Safe</button>
             </li>
             {% empty %}
-            <li>No classifications found.</li>
+            <li>No dangers yet.</li>
             {% endfor %}
         </ul>
     </div>
