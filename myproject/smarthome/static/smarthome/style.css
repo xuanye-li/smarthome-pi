@@ -1,0 +1,144 @@
+/* Basic body styling */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+/* Header and navigation styling */
+header {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 24px;
+}
+
+nav {
+    background-color: #0066cc;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+nav a {
+    color: green;
+    padding: 10px 20px;
+    margin: 0 10px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    background-color: #0056b3;
+}
+
+/* Content styling */
+.content {
+    padding: 20px;
+    margin-top: 20px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 10px;
+    padding: 10px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1 {
+    color: #0066cc;
+    text-align: center;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0 auto;
+    max-width: 600px;
+}
+
+li {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 10px;
+    padding: 10px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+a {
+    text-decoration: none;
+    color: #007BFF;
+    font-weight: bold;
+    background-color: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #007BFF;
+}
+
+a:hover {
+    background-color: #e2e6ea;
+    border-color: #dae0e5;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    ul {
+        width: 100%;
+    }
+}
+
+.button {
+    padding: 8px 15px;
+    border-radius: 5px;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s;
+}
+
+.button-primary {
+    background-color: #007bff;
+}
+
+.button-primary:hover {
+    background-color: #0056b3;
+}
+
+.button-danger {
+    background-color: #dc3545;
+}
+
+.button-danger:hover {
+    background-color: #c82333;
+}
+
+.button-light {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.button-light:hover {
+    background-color: #e2e3e5;
+}

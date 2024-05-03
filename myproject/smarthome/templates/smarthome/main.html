@@ -1,23 +1,40 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classification Results</title>
+    <title>SMARTHOME - Classification Results</title>
+    <link rel="stylesheet" href="{% static 'smarthome/style.css' %}">
 </head>
 <body>
-    <h1>Classification Results</h1>
-    <ul>
-        {% for classification in classifications %}
-        <li>
-            {{ classification.timestamp }} - Label: {{ classification.label }}
-            {% if classification.media_file %}
-            <a href="{{ classification.media_file.url }}" target="_blank">View Media</a>
-            {% endif %}
-        </li>
-        {% empty %}
-        <li>No classifications found.</li>
-        {% endfor %}
-    </ul>
+    <header>
+        SMARTHOME
+    </header>
+    <nav>
+        <a href="#home">Home</a>
+        <a href="#services">Services</a>
+        <a href="#contact">Contact</a>
+        <a href="#about">About</a>
+    </nav>
+    <div class="content">
+        <h1>Classification Results</h1>
+        <ul>
+            <button class="button button-danger">Call 911</button>
+            {% for classification in classifications %}
+            <li>
+                <div>
+                    <strong>{{ classification.timestamp|date:"Y-m-d H:i" }}</strong> - {{ classification.label }}
+                </div>
+                {% if classification.media_file %}
+                <a href="{{ classification.media_file.url }}" target="_blank" class="button button-primary">View Media</a>
+                {% endif %}
+                <button class="button button-light">Mark as Safe</button>
+            </li>
+            {% empty %}
+            <li>No classifications found.</li>
+            {% endfor %}
+        </ul>
+    </div>
 </body>
 </html>
