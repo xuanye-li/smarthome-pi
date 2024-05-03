@@ -138,7 +138,7 @@ def audio_thread(interpreter):
             response = sock.recv(1024)
             CLAP_label = response.decode()
             print("CLAP response:", CLAP_label)
-            if CLAP_label != 'normal':
+            if CLAP_label != 'Normal':
                 send_to_webapp(CLAP_label, filename)
         
 
@@ -181,27 +181,44 @@ def ir_thread(model, mlx):
     # Collect data
     while True:
         data_frames = collect_data(mlx)
-        prediction = classify(model, data_frames)
 
-        if prediction[0] == 1:
-            print("Fall Detected")
-            # Set up the plot for the animation
-            fig, ax = plt.subplots()
-            heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        print("Fall Detected")
+        # Set up the plot for the animation
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        
+        # Animation function to update heatmap
+        def update(frame):
+            heatmap.set_data(frame)
+            return [heatmap]
+
+        # Create animation
+        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        # Save animation
+        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        plt.show()
+
+        # prediction = classify(model, data_frames)
+
+        # if prediction[0] == 1:
+        #     print("Fall Detected")
+        #     # Set up the plot for the animation
+        #     fig, ax = plt.subplots()
+        #     heatmap = ax.imshow(data_frames[0], cmap='inferno')
             
-            # Animation function to update heatmap
-            def update(frame):
-                heatmap.set_data(frame)
-                return [heatmap]
+        #     # Animation function to update heatmap
+        #     def update(frame):
+        #         heatmap.set_data(frame)
+        #         return [heatmap]
 
-            # Create animation
-            ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-            # Save animation
-            ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-            send_to_webapp('fall', 'heatmap_video.mp4')
+        #     # Create animation
+        #     ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        #     # Save animation
+        #     ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        #     send_to_webapp('fall', 'heatmap_video.mp4')
 
-        else:
-            print(f'{"No Fall"}')
+        # else:
+        #     print(f'{"No Fall"}')
 
 
 
@@ -236,27 +253,46 @@ def main():
     audio_processing.start()
     while True:
         data_frames = collect_data(mlx)
-        prediction = classify(model, data_frames)
 
-        if prediction[0] == 1:
-            print("Fall Detected")
-            # Set up the plot for the animation
-            fig, ax = plt.subplots()
-            heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        print("Fall Detected")
+        # Set up the plot for the animation
+        fig, ax = plt.subplots()
+        heatmap = ax.imshow(data_frames[0], cmap='inferno')
+        
+        # Animation function to update heatmap
+        def update(frame):
+            heatmap.set_data(frame)
+            return [heatmap]
+
+        # Create animation
+        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        # Save animation
+        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        send_to_webapp('fall', 'heatmap_video.mp4')
+        plt.show()
+
+        # prediction = classify(model, data_frames)
+
+        # if prediction[0] == 1:
+        #     print("Fall Detected")
+        #     # Set up the plot for the animation
+        #     fig, ax = plt.subplots()
+        #     heatmap = ax.imshow(data_frames[0], cmap='inferno')
             
-            # Animation function to update heatmap
-            def update(frame):
-                heatmap.set_data(frame)
-                return [heatmap]
+        #     # Animation function to update heatmap
+        #     def update(frame):
+        #         heatmap.set_data(frame)
+        #         return [heatmap]
 
-            # Create animation
-            ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-            # Save animation
-            ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-            send_to_webapp('fall', 'heatmap_video.mp4')
+        #     # Create animation
+        #     ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
+        #     # Save animation
+        #     ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+        #     plt.show()
+        #     send_to_webapp('fall', 'heatmap_video.mp4')
 
-        else:
-            print(f'{"No Fall"}')
+        # else:
+        #     print(f'{"No Fall"}')
         
 
 if __name__ == "__main__":
