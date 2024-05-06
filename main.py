@@ -16,11 +16,23 @@ import os
 import sys
 import json
 import requests
+import csv
+from scipy.ndimage import gaussian_filter
+import warnings
+import cv2
 
 FORMAT = pyaudio.paFloat32  # Typical format for microphone
 CHANNELS = 1
 RATE = 44100  # Sample rate
 CHUNK = 1024  # Block size
+
+def save_frames_to_csv(frames, filename='output.csv'):
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        for frame in frames:
+            # Flatten each frame from 24x32 to a single row of 768 elements
+            flattened_frame = frame.flatten()
+            writer.writerow(flattened_frame)
 
 def send_to_webapp(label, file_path):
     url = 'http://172.26.173.56:8000/receive/'
@@ -177,51 +189,37 @@ def audio_thread(interpreter):
         #     create_wav(raw_audio_data, filename)            
 
 
-def ir_thread(model, mlx):
-    # Collect data
-    while True:
-        data_frames = collect_data(mlx)
+# Function to preprocess data frames and detect falls
+def detect_fall(binary_frames):
+    FALL_THRESHOLD = 5
+    FRAME_THRESHOLD = 6
+    # List to store centroids
+    centroids = []
 
-        print("Fall Detected")
-        # Set up the plot for the animation
-        fig, ax = plt.subplots()
-        heatmap = ax.imshow(data_frames[0], cmap='inferno')
-        
-        # Animation function to update heatmap
-        def update(frame):
-            heatmap.set_data(frame)
-            return [heatmap]
+    # Loop through each binary frame
+    for binary_frame in binary_frames:
+        # Find contours in the binary image
+        contours, _ = cv2.findContours(binary_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Create animation
-        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-        # Save animation
-        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-        plt.show()
-
-        # prediction = classify(model, data_frames)
-
-        # if prediction[0] == 1:
-        #     print("Fall Detected")
-        #     # Set up the plot for the animation
-        #     fig, ax = plt.subplots()
-        #     heatmap = ax.imshow(data_frames[0], cmap='inferno')
-            
-        #     # Animation function to update heatmap
-        #     def update(frame):
-        #         heatmap.set_data(frame)
-        #         return [heatmap]
-
-        #     # Create animation
-        #     ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-        #     # Save animation
-        #     ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-        #     send_to_webapp('fall', 'heatmap_video.mp4')
-
-        # else:
-        #     print(f'{"No Fall"}')
-
-
-
+        # Loop through each contour
+        for contour in contours:
+            # Get centroid of the contour
+            M = cv2.moments(contour)
+            if M["m00"] != 0:
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                centroids.append((cX, cY))  # Save centroid coordinates
+    if len(centroids) == 0:
+        return False, None
+    starting_centroid = centroids[0]
+    falling_frames = 0
+    # Check if any centroid exceeds the fall threshold
+    for centroid in centroids:
+        if centroid[1] - starting_centroid[1]  > FALL_THRESHOLD:
+            falling_frames += 1  # Fall detected and return all centroids
+    if falling_frames > FRAME_THRESHOLD:
+        return True, centroids
+    return False, centroids  # No fall detected
 
 def main():
     model_filename = "finalized_model.pkl"
@@ -235,41 +233,66 @@ def main():
     mlx = adafruit_mlx90640.MLX90640(i2c)
     mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_32_HZ
 
-    # load model
-    with open(model_filename, 'rb') as file:
-        model = pickle.load(file)
+    # # load model
+    # with open(model_filename, 'rb') as file:
+    #     model = pickle.load(file)
 
     # Load the TensorFlow Lite model
     interpreter = tflite.Interpreter(model_path="danger_float.lite")
     interpreter.allocate_tensors()
 
     audio_processing  = threading.Thread(target=audio_thread, args=(interpreter,))
-
-        # start_time = time.time()  # Start timing
-        
-        # end_time = time.time()  # End timing
-        # inference_time = end_time - start_time  # Calculate inference time
-
     audio_processing.start()
     while True:
+        TEMP_THRESHOLD = 25.5
         data_frames = collect_data(mlx)
 
-        print("Fall Detected")
-        # Set up the plot for the animation
-        fig, ax = plt.subplots()
-        heatmap = ax.imshow(data_frames[0], cmap='inferno')
-        
-        # Animation function to update heatmap
-        def update(frame):
-            heatmap.set_data(frame)
-            return [heatmap]
+        # Preprocess data frames with Gaussian filtering
+        smoothed_frames = [gaussian_filter(frame, sigma=1.5) for frame in data_frames]
 
-        # Create animation
-        ani = FuncAnimation(fig, update, frames=data_frames, interval=63, blit=True)
-        # Save animation
-        ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
-        send_to_webapp('fall', 'heatmap_video.mp4')
-        plt.show()
+        # Thresholding to create binary image
+        binary_frames = [(frame > TEMP_THRESHOLD).astype(np.uint8) for frame in smoothed_frames]
+
+        fall, centroids = detect_fall(binary_frames)
+
+        if (fall):
+            print("Fall Detected")
+            # Set up the plot for the animation
+            fig, ax = plt.subplots()
+            heatmap = ax.imshow(smoothed_frames[0], cmap='inferno')
+            
+            
+            # Add colorbar indicating temperature range
+            cbar = fig.colorbar(heatmap, ax=ax)
+            cbar.set_label('Temperature (°C)')
+            
+            # Initialize centroid plot
+            centroid_plot, = ax.plot([], [], 'bo', markersize=15)  # Blue circle marker
+            
+            # Animation function to update heatmap and centroid
+            def update(frame):
+                heatmap.set_data(smoothed_frames[frame])    
+                # Plot centroids for the current frame
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    try:
+                        c = centroids[frame]
+                        centroid_plot.set_data(c)
+                    except:
+                        return [heatmap, centroid_plot]
+                
+                return [heatmap, centroid_plot]
+
+            # Create animation
+            #print("creating animation")
+            ani = FuncAnimation(fig, update, frames=len(smoothed_frames), interval=63, blit=True)
+            
+            # Save animation
+            ani.save('heatmap_video.mp4', writer='ffmpeg', fps=15)
+            send_to_webapp('fall', 'heatmap_video.mp4')
+        else:
+            print("No Fall")
+
 
         # prediction = classify(model, data_frames)
 
