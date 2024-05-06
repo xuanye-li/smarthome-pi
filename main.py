@@ -5,7 +5,7 @@ import board
 import busio
 import adafruit_mlx90640
 import time
-from non_ml import classify
+from edge_classify import classify
 import pickle
 import pyaudio
 import tflite_runtime.interpreter as tflite
